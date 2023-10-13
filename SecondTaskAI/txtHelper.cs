@@ -41,5 +41,12 @@ namespace SecondTaskAI
                 await fstream.WriteAsync(buffer, 0, buffer.Length);
             }
         }
+        internal static async void WriteFileLinesAsync(string path, List<string> data, bool append = false)
+        {
+            if(!append) File.WriteAllLines(path, data);
+            else File.AppendAllLines(path, data);
+            
+        }
+        internal static bool FileExists(string path) => File.Exists(path);
     }
 }
