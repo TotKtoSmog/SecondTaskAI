@@ -14,6 +14,7 @@ namespace SecondTaskAI
     class Program
     {
         static string message = "";
+        static List<string> paths = new List<string>();
         private static async Task Main(string[] args)
         {
             Thread PrinterMessage = new Thread(PrintMessage);
@@ -21,17 +22,15 @@ namespace SecondTaskAI
             ListUser = ListUser.Select(item => CorrecterVkId(item)).ToList();
             VkApi api = await Authorization();
             PrinterMessage.Start();
-            //List<long> idVkUser = api.Users.Get(ListUser).Select(n => n.Id).ToList();
-            //checkIdVk(api, "id_totktosmog");
             foreach (string userId in ListUser)
-            {
                 checkIdVk(api, userId);
-            }
+
+            sendMessageConsole("Закончин поик друзей");
+            sendMessageConsole("Объединение файлов");
+            joinFile();
+            //sendMessageConsole("Объединение файлов окончено");
             sendMessageConsole("exit");
-
-
             Console.ReadKey();
-            
         }
 
         private static void PrintMessage()
@@ -81,14 +80,15 @@ namespace SecondTaskAI
         {
             sendMessageConsole($"Начало работы с id/псевдонимом {id}",ConsoleColor.Green);
             var uservk = api.Users.Get(new List<string>() { id });
+            Thread.Sleep(1000);
             if (uservk.Count() > 0)
             {
                 long idvk = uservk[0].Id;
-                string path = $@"data\dataUser\{id}.txt";
+                string path = $@"data\dataUser\id{idvk}.txt";
+                paths.Add(path);
                 if (txtHelper.FileExists(path))
                 {
                     sendMessageConsole($"Файл с пользователем id {id} уже существует", ConsoleColor.Green);
-                    Thread.Sleep(1000);
                     return;
                 }
                 sendMessageConsole($"Запись в файл: {path}");
@@ -97,7 +97,7 @@ namespace SecondTaskAI
                 {
                     sendMessageConsole($"У польователя {id}, числовой id = {idvk}, количество друзей {friend.Count}");
                     List<string> myFriend = friend.Select(n => $"{idvk}:{n.Id}").ToList();
-                    txtHelper.WriteFileLinesAsync(path, myFriend);
+                    txtHelper.WriteFileLines(path, myFriend);
                     int i = 1;
                     foreach (User user in friend)
                     {
@@ -107,7 +107,7 @@ namespace SecondTaskAI
                         {
                             sendMessageConsole($"\t количестов друзей {f.Count}");
                             myFriend = f.Select(n => $"{user.Id}:{n.Id}").ToList();
-                            txtHelper.WriteFileLinesAsync(path, myFriend, true);
+                            txtHelper.WriteFileLines(path, myFriend, true);
                         }
                         Thread.Sleep(1000);
                     }
@@ -115,8 +115,12 @@ namespace SecondTaskAI
             }
             else
                 sendMessageConsole($"Пользователь по id {id} не найден", ConsoleColor.Red);
-            Thread.Sleep(1000);
             sendMessageConsole($"Закончина работа с пользователем {id}",ConsoleColor.Green);  
+        }
+        private static void joinFile()
+        {
+            txtHelper.JoinFile(paths);
+            sendMessageConsole("Объединение файлов окончено");
         }
     }
 }
