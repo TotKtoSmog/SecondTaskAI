@@ -89,10 +89,12 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Model\VkApiUser.cs" />
     <Compile Include="Service\csvHelper.cs" />
     <Compile Include="Model\Authorize.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Service\SenderMessage.cs" />
     <Compile Include="Service\txtHelper.cs" />
   </ItemGroup>
   <ItemGroup>
@@ -106,7 +108,6 @@
     <Content Include="data\AuthorizeData.txt">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="data\temp.txt" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="data\dataUser\" />

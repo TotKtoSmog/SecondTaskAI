@@ -56,9 +56,9 @@ namespace SecondTaskAI
         }
         internal static void WriteFileLines(string path, List<string> data, bool append = false)
         {
-            if(!append) File.WriteAllLines(path, data);
-            else  File.AppendAllLines(path, data);
-            
+            if (!append) File.WriteAllLines(path, data);
+            else File.AppendAllLines(path, data);
+
         }
         internal static bool FileExists(string path) => File.Exists(path);
     }
