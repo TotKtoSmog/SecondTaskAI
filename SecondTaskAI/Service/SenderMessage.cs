@@ -10,8 +10,6 @@ namespace SecondTaskAI.Service
             Console.WriteLine(meassage);
         }
         static internal void sendErrorMessage(string meassage)
-        {
-            sendMessage(meassage, ConsoleColor.Red);
-        }
+            => sendMessage(meassage, ConsoleColor.Red);
     }
 }

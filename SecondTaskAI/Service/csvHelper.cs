@@ -8,7 +8,10 @@ namespace SecondTaskAI
 {
     internal static class csvHelper
     {
-        static private CsvConfiguration config = new CsvConfiguration(CultureInfo.CurrentCulture) { Delimiter = ",", Encoding = Encoding.UTF8 };
+        internal const char delimiter = ',';
+        static private CsvConfiguration config = new CsvConfiguration(CultureInfo.CurrentCulture) {
+            Delimiter = $"{delimiter}", Encoding = Encoding.UTF8 
+        };
         public static void setCsvConfiguration(CsvConfiguration c) => config = c;
         internal static List<string> ReadCsvFile(string path, string columnName)
         {

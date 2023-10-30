@@ -66,17 +66,7 @@ namespace SecondTaskAI
                     }
                 }
                 foreach (var f in u.friends)
-                {
-
                     WriteUserInFile(f, PathResFile);
-                    /*txtHelper.WriteFileLines($@"data\dataUser\lvl4.txt", new List<string>() { "#" + f.me }, true);
-                    list.Clear();
-                    foreach (var ff in f.friends)
-                        list.Add(ff.me);
-                    txtHelper.WriteFileLines($@"data\dataUser\lvl4.txt", list, true);*/
-                }
-
-
             }
         }
         private static async Task<List<VkApiUser>> LoadUser(string PathUserFile)
@@ -106,13 +96,69 @@ namespace SecondTaskAI
                 list.Add(f.me);
             txtHelper.WriteFileLines(Path, list, true);
         }
+        private static void WriteEdgesInFile(List<VkApiUser> users)
+        {
+            char delimiter = csvHelper.delimiter;
+            List<string> Edges = new List<string>();
+            foreach (VkApiUser user in users)
+            {
+                Edges.Clear();
+                foreach (VkApiUser friend in user.friends)
+                    Edges.Add($"{user.me}{delimiter}{friend.me}");
+                txtHelper.WriteFileLines(@"data\dataUser\Edges.txt", Edges, true);
+            }
+        }
+        private static async Task RemovUnnecessaryEdges(string pathF, string pathFOF)
+        {
+            SenderMessage.sendMessage($"Чиатем файл {pathF}");
+            List<VkApiUser> friends = await LoadUser(pathF);
+            SenderMessage.sendMessage($"Фуууух, законили");
+            SenderMessage.sendMessage($"Чиатем файл {pathFOF}");
+            List<VkApiUser> friendsOfFriends = await LoadUser(pathFOF);
+            SenderMessage.sendMessage($"Фуууух, законили");
+            List<string> Edges = new List<string>();
+            foreach (VkApiUser me in friends)
+            {
+                Edges.Clear();
+                foreach(VkApiUser friend in me.friends)
+                {
+                    
+                    foreach(VkApiUser FoF in friendsOfFriends)
+                    {
+                        string[] t = FoF.friends.Select(n => n.me).ToArray();
+                        if (t.Contains(friend.me))
+                        {
+                            if (!Edges.Contains($"{friend.me},{FoF.me}") && !Edges.Contains($"{FoF.me},{friend.me}"))
+                            {
+                                Edges.Add($"{friend.me},{FoF.me}");
+                                break;
+                            }
+                        }
+                    }
+                    if(Edges.Count > 0 && ( !Edges.Contains($"{me.me},{friend.me}") && !Edges.Contains($"{friend.me},{me.me}")))
+                        Edges.Add($"{me.me},{friend.me}");
+                }
+                txtHelper.WriteFileLines(@"data\dataUser\Edges.txt", Edges, true);
+            }
+             
+            SenderMessage.sendMessage("Все!!!");
+        }
+        
+        private static List<string> GetUSerFromeCSV(string path)
+        {
+            List<string> ListUser = csvHelper.ReadCsvFile(path, "Ваш ID в VK");
+            ListUser = ListUser.Select(item => CorrecterVkId(item)).ToList();
+            return ListUser;
+        }
         private static async Task Main(string[] args)
         {
             VkApi api = await Authorization();
+            List<long> idVkUser = api.Users.Get(GetUSerFromeCSV(@"data\dataF.csv")).Select(n => n.Id).ToList();
+            foreach (long nameUserVk in idVkUser)
+                users.Add(new VkApiUser(nameUserVk.ToString()));
 
-            users = await LoadUser($@"data\dataUser\lvl3.txt");
-            SenderMessage.sendMessage($"{users.Count}");
-            getDataUserInFile(ref users, $@"data\dataUser\lvl5.txt", api);
+
+            await RemovUnnecessaryEdges($@"data\dataUser\lvl3.txt", $@"data\dataUser\lvl4.txt");
 
             Console.ReadKey();
         }
@@ -124,11 +170,6 @@ namespace SecondTaskAI
             var result = api.Call("execute.getFriendsById", new VkParameters(parameters));
             ids = "";
             return result;
-        }
-        private static void sendMessageConsole(string mes, ConsoleColor color = ConsoleColor.White )
-        {
-            Console.ForegroundColor = color;
-            message = mes;
         }
         private static string CorrecterVkId(string item) => item.Trim('@').Replace("https://vk.com/", "");
         private static async Task<VkApi> Authorization()
@@ -142,23 +183,6 @@ namespace SecondTaskAI
             });
             return api;
         }
-        private static async Task<VkCollection<User>> GetVkFriends(VkApi api, long idVk, int MaxCountFriends = 20000)
-        {
-            VkCollection<User> friend = null;
-            try
-            {
-                friend = await api.Friends.GetAsync(new FriendsGetParams { UserId = idVk, Count = MaxCountFriends });
-            }
-            catch(Exception e)
-            {
-                SenderMessage.sendErrorMessage($"Возникла ошибка {e.Message}");
-            }
-            return friend;
-        }
-        private static void joinFile()
-        {
-            txtHelper.JoinFile(paths);
-            sendMessageConsole("Объединение файлов окончено");
-        }
+
     }
 }
