@@ -156,8 +156,14 @@ namespace SecondTaskAI
             List<long> idVkUser = api.Users.Get(GetUSerFromeCSV(@"data\dataF.csv")).Select(n => n.Id).ToList();
             foreach (long nameUserVk in idVkUser)
                 users.Add(new VkApiUser(nameUserVk.ToString()));
-
-
+            getDataUserInFile(ref users, $@"data\dataUser\lvl2.txt", api);
+            WriteEdgesInFile(users);
+            users.Clear();
+            users = await LoadUser($@"data\dataUser\lvl2.txt");
+            getDataUserInFile(ref users, $@"data\dataUser\lvl3.txt", api);
+            users.Clear();
+            users = await LoadUser($@"data\dataUser\lvl3.txt");
+            getDataUserInFile(ref users, $@"data\dataUser\lvl4.txt", api);
             await RemovUnnecessaryEdges($@"data\dataUser\lvl3.txt", $@"data\dataUser\lvl4.txt");
 
             Console.ReadKey();
