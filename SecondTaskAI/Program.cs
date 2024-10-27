@@ -14,6 +14,7 @@ namespace SecondTaskAI
 {
     class Program
     {
+        private const string _path = @"";
         private const bool _debug = true;
         static string message = "";
         static List<string> paths = new List<string>();
@@ -145,20 +146,22 @@ namespace SecondTaskAI
             SenderMessage.SendMessage("Все!!!");
         }
         
-        private static List<string> GetUSerFromCSV(string path)
+        private static List<string> GetUSerFromCSV(string path, string columnName = "Ваш ID в VK")
         {
-            List<string> ListUser = CsvHelper.ReadCsvFile(path, "Ваш ID в VK");
+            List<string> ListUser = CsvHelper.ReadCsvFile(path, columnName);
             ListUser = ListUser.Select(item => CorrectorVkId(item)).ToList();
             return ListUser;
         }
-        private static async Task Main(string[] args)
+        private static async Task Main()
         {
             VkApi api = await Authorization();
             
-            List<long> idVkUser = api.Users.Get(GetUSerFromCSV(@"data\dataF.csv")).Select(n => n.Id).ToList();
+            List<long> idVkUser = api.Users.Get(GetUSerFromCSV($@"{_path}\dataF.csv","ID")).Select(n => n.Id).ToList();
             foreach (long nameUserVk in idVkUser)
                 users.Add(new VkApiUser(nameUserVk.ToString()));
-            
+
+            if (idVkUser.Count != 0) await SenderMessage.SendMessageAsync($"Пользователи успешно получены, их количество {idVkUser.Count}");
+            else await SenderMessage.SendErrorMessageAsync($"Пользователи не найдены!");
 
             Console.ReadKey();
         }
@@ -181,7 +184,10 @@ namespace SecondTaskAI
                 AccessToken = AccessToken,
                 Settings = Settings.All
             });
-            if (api != null && _debug) await Console.Out.WriteLineAsync("Авторизация прошла успешно");
+            if (api != null) 
+                await SenderMessage.SendMessageAsync("Авторизация прошла успешно");
+            else
+                await SenderMessage.SendErrorMessageAsync("Ошибка в авторизация");
             return api;
         }
 
