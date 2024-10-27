@@ -14,6 +14,7 @@ namespace SecondTaskAI
 {
     class Program
     {
+        private const bool _debug = true;
         static string message = "";
         static List<string> paths = new List<string>();
         static List<VkApiUser> users = new List<VkApiUser>();
@@ -33,7 +34,7 @@ namespace SecondTaskAI
                 while (param != "" || i < u.friends.Count - 1)
                 {
                     i++;
-                    SenderMessage.sendMessage($"{i + 1}) Пользователь {u.friends[i].me}");
+                    SenderMessage.SendMessage($"{i + 1}) Пользователь {u.friends[i].me}");
                     param += $"{u.friends[i].me},";
                     if (i % 12 == 0 && i != 0)
                     {
@@ -98,7 +99,7 @@ namespace SecondTaskAI
         }
         private static void WriteEdgesInFile(List<VkApiUser> users)
         {
-            char delimiter = csvHelper.delimiter;
+            char delimiter = CsvHelper.delimiter;
             List<string> Edges = new List<string>();
             foreach (VkApiUser user in users)
             {
@@ -108,14 +109,14 @@ namespace SecondTaskAI
                 txtHelper.WriteFileLines(@"data\dataUser\Edges.txt", Edges, true);
             }
         }
-        private static async Task RemovUnnecessaryEdges(string pathF, string pathFOF)
+        private static async Task RewoveUnnecessaryEdges(string pathF, string pathFOF)
         {
-            SenderMessage.sendMessage($"Чиатем файл {pathF}");
+            SenderMessage.SendMessage($"Чиатем файл {pathF}");
             List<VkApiUser> friends = await LoadUser(pathF);
-            SenderMessage.sendMessage($"Фуууух, законили");
-            SenderMessage.sendMessage($"Чиатем файл {pathFOF}");
+            SenderMessage.SendMessage($"Фуууух, законили");
+            SenderMessage.SendMessage($"Чиатем файл {pathFOF}");
             List<VkApiUser> friendsOfFriends = await LoadUser(pathFOF);
-            SenderMessage.sendMessage($"Фуууух, законили");
+            SenderMessage.SendMessage($"Фуууух, законили");
             List<string> Edges = new List<string>();
             foreach (VkApiUser me in friends)
             {
@@ -141,30 +142,23 @@ namespace SecondTaskAI
                 txtHelper.WriteFileLines(@"data\dataUser\Edges.txt", Edges, true);
             }
              
-            SenderMessage.sendMessage("Все!!!");
+            SenderMessage.SendMessage("Все!!!");
         }
         
-        private static List<string> GetUSerFromeCSV(string path)
+        private static List<string> GetUSerFromCSV(string path)
         {
-            List<string> ListUser = csvHelper.ReadCsvFile(path, "Ваш ID в VK");
-            ListUser = ListUser.Select(item => CorrecterVkId(item)).ToList();
+            List<string> ListUser = CsvHelper.ReadCsvFile(path, "Ваш ID в VK");
+            ListUser = ListUser.Select(item => CorrectorVkId(item)).ToList();
             return ListUser;
         }
         private static async Task Main(string[] args)
         {
             VkApi api = await Authorization();
-            List<long> idVkUser = api.Users.Get(GetUSerFromeCSV(@"data\dataF.csv")).Select(n => n.Id).ToList();
+            
+            List<long> idVkUser = api.Users.Get(GetUSerFromCSV(@"data\dataF.csv")).Select(n => n.Id).ToList();
             foreach (long nameUserVk in idVkUser)
                 users.Add(new VkApiUser(nameUserVk.ToString()));
-            getDataUserInFile(ref users, $@"data\dataUser\lvl2.txt", api);
-            WriteEdgesInFile(users);
-            users.Clear();
-            users = await LoadUser($@"data\dataUser\lvl2.txt");
-            getDataUserInFile(ref users, $@"data\dataUser\lvl3.txt", api);
-            users.Clear();
-            users = await LoadUser($@"data\dataUser\lvl3.txt");
-            getDataUserInFile(ref users, $@"data\dataUser\lvl4.txt", api);
-            await RemovUnnecessaryEdges($@"data\dataUser\lvl3.txt", $@"data\dataUser\lvl4.txt");
+            
 
             Console.ReadKey();
         }
@@ -177,16 +171,17 @@ namespace SecondTaskAI
             ids = "";
             return result;
         }
-        private static string CorrecterVkId(string item) => item.Trim('@').Replace("https://vk.com/", "");
+        private static string CorrectorVkId(string item) => item.Trim('@').Replace("https://vk.com/", "");
         private static async Task<VkApi> Authorization()
         {
-            string AccessToken = await txtHelper.ReadFileAsync(Authorize.getAuthorizeDataPath());
+            string AccessToken = await txtHelper.ReadFileAsync(Authorize.GetAuthorizeDataPath());
             VkApi api = new VkApi();
             api.Authorize(new ApiAuthParams()
             {
                 AccessToken = AccessToken,
                 Settings = Settings.All
             });
+            if (api != null && _debug) await Console.Out.WriteLineAsync("Авторизация прошла успешно");
             return api;
         }
 

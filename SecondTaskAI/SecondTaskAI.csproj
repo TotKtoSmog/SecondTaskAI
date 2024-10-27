@@ -90,7 +90,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Model\VkApiUser.cs" />
-    <Compile Include="Service\csvHelper.cs" />
+    <Compile Include="Service\CsvHelper.cs" />
     <Compile Include="Model\Authorize.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
