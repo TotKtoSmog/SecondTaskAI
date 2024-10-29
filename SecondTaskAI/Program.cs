@@ -2,6 +2,7 @@
 using SecondTaskAI.Service;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -15,62 +16,17 @@ namespace SecondTaskAI
     class Program
     {
         private const string _path = @"";
-        private const bool _debug = true;
-        static string message = "";
+
+        private const bool skipEmptyFriends = true;
+
+        public static string[] friendlvl = { "lvl0.txt", "lvl1.txt", "lvl2.txt" };
+        private static List<string> friendlvlFound = new List<string>();
+        private static List<string> friendlvlNotFound = new List<string>();
+
+        static bool skip = false;
         static List<string> paths = new List<string>();
         static List<VkApiUser> users = new List<VkApiUser>();
         static IDictionary<string, string> parameters = new Dictionary<string, string>();
-        private static void getDataUserInFile(ref List<VkApiUser> users, string PathResFile, VkApi api)
-        {
-            string param = "";
-            int i = -1;
-            int counter = 0;
-            List<string> list = new List<string>();
-            foreach (var u in users)
-            {
-                i = -1;
-                counter = 0;
-                param = "";
-
-                while (param != "" || i < u.friends.Count - 1)
-                {
-                    i++;
-                    SenderMessage.SendMessage($"{i + 1}) Пользователь {u.friends[i].me}");
-                    param += $"{u.friends[i].me},";
-                    if (i % 12 == 0 && i != 0)
-                    {
-
-                        int id = param.Split(',').Count() - 1;
-                        var result = GetFriendsID(ref param, api);
-
-                        for (int j = 0; j < id; j++)
-                        {
-                            foreach (var item in result[j].ToListOf<string>(n => n))
-                                u.friends[counter].friends.Add(new VkApiUser(item));
-                            counter++;
-                        }
-                        Thread.Sleep(310);
-                    }
-                    if (i >= u.friends.Count - 1)
-                    {
-                        int id = param.Split(',').Count() - 1;
-                        if (id > 0)
-                        {
-                            var result = GetFriendsID(ref param, api);
-                            for (int j = 0; j < id; j++)
-                            {
-                                foreach (var item in result[j].ToListOf<string>(n => n))
-                                    u.friends[counter].friends.Add(new VkApiUser(item));
-                                counter++;
-                            }
-                        }
-                        Thread.Sleep(310);
-                    }
-                }
-                foreach (var f in u.friends)
-                    WriteUserInFile(f, PathResFile);
-            }
-        }
         private static async Task<List<VkApiUser>> LoadUser(string PathUserFile)
         {
             List<string> list = await txtHelper.ReadFileLinesAsync(PathUserFile);
@@ -97,6 +53,11 @@ namespace SecondTaskAI
             foreach (var f in user.friends)
                 list.Add(f.me);
             txtHelper.WriteFileLines(Path, list, true);
+        }
+        private static void WriteUserInFile(List<VkApiUser> users, string Path)
+        {
+            foreach (var user in users)
+                txtHelper.WriteFileLines(Path, new List<string>() { "#" + user.me }, true);
         }
         private static void WriteEdgesInFile(List<VkApiUser> users)
         {
@@ -155,17 +116,103 @@ namespace SecondTaskAI
         private static async Task Main()
         {
             VkApi api = await Authorization();
+
             
             List<long> idVkUser = api.Users.Get(GetUSerFromCSV($@"{_path}\dataF.csv","ID")).Select(n => n.Id).ToList();
             foreach (long nameUserVk in idVkUser)
                 users.Add(new VkApiUser(nameUserVk.ToString()));
 
-            if (idVkUser.Count != 0) await SenderMessage.SendMessageAsync($"Пользователи успешно получены, их количество {idVkUser.Count}");
-            else await SenderMessage.SendErrorMessageAsync($"Пользователи не найдены!");
+            if (idVkUser.Count != 0 && !skip) await SenderMessage.SendMessageAsync($"Пользователи успешно получены, их количество {idVkUser.Count}");
+            else
+            {
+                await SenderMessage.SendErrorMessageAsync($"Пользователи не найдены!");
+                return;
+            }
+            await SenderMessage.SendMessageAsync($"Проверка на наличие уровней друзей");
 
+            foreach (string item in friendlvl)
+            {
+                if (File.Exists($@"{_path}/{item}"))
+                {
+                    await SenderMessage.SendMessageAsync($"Файл уже был создан {item}", ConsoleColor.Green);
+                    friendlvlFound.Add(item);
+                }   
+                else
+                {
+                    await SenderMessage.SendErrorMessageAsync($"Файл не найден {item}");
+                    friendlvlNotFound.Add(item);
+                }
+                    
+            }
+
+            if(friendlvlNotFound.Count != 0)
+            {
+                switch (friendlvlNotFound.First())
+                {
+                    case "lvl0.txt":
+                        {
+                            WriteUserInFile(users, $@"{_path}/{friendlvlNotFound.First()}");
+                            await SenderMessage.SendMessageAsync($"Данные внесены в файл {friendlvlNotFound.First()}", ConsoleColor.Green);
+                        }
+                        break;
+                    case "lvl1.txt":
+                        {
+                            users = await LoadUser($@"{_path}/{friendlvlFound.Last()}");
+                            await SenderMessage.SendMessageAsync($"Загружено: {users.Count}");
+                            GetFriends(ref users, api);
+
+                            if(skipEmptyFriends)
+                                users = users.Where(n => n.friends.Count > 0).ToList();
+
+                            users.ForEach(n => WriteUserInFile(n, $@"{_path}/{friendlvlNotFound.First()}"));
+                            await SenderMessage.SendMessageAsync($"Данные внесены в файл {friendlvlNotFound.First()}", ConsoleColor.Green);
+                        }
+                        break;
+                    case "lvl2.txt":
+                        {
+                            users = await LoadUser($@"{_path}/{friendlvlFound.Last()}");
+                            await SenderMessage.SendMessageAsync($"Загружено: {users.Count}");
+                            foreach (VkApiUser u in users)
+                            {
+                                VkApiUser temp = u;
+                                await SenderMessage.SendMessageAsync($"У пользователя: {u.me} число друзей {u.friends.Count}");
+                                GetFriends(ref temp.friends, api);
+
+                                if (skipEmptyFriends)
+                                    temp.friends = temp.friends.Where(n => n.friends.Count > 0).ToList();
+
+                                temp.friends.ForEach(n => WriteUserInFile(n, $@"{_path}/{friendlvlNotFound.First()}"));
+                                await SenderMessage.SendMessageAsync($"Данные внесены в файл {friendlvlNotFound.First()}", ConsoleColor.Green);
+                            }
+                        }
+                        break;
+                }  
+            }
             Console.ReadKey();
         }
+        private static void GetFriends(ref List<VkApiUser> users, VkApi api)
+        {
+            string parametrs = "";
+            int skipCount = 0;
+            int stepCount = 10;
+            while (skipCount < users.Count)
+            {
+                List<VkApiUser> tempUser = users.Skip(skipCount).Take(stepCount).ToList();
+                
+                parametrs = string.Join(", ", tempUser.Select(n => n.me));
 
+                var result = GetFriendsID(ref parametrs, api);
+                
+                for (int i = skipCount; i - skipCount < tempUser.Count; i++)
+                {
+                    foreach (var item in result[i - skipCount].ToListOf<string>(n => n))
+                        users[i].friends.Add(new VkApiUser(item));
+                }
+                skipCount += tempUser.Count < stepCount ? tempUser.Count : stepCount;
+                Thread.Sleep(310);
+            }
+            
+        }
         private static VkResponse GetFriendsID(ref string ids, VkApi api)
         {
             ids = ids.Remove(ids.Length - 1);
@@ -187,7 +234,10 @@ namespace SecondTaskAI
             if (api != null) 
                 await SenderMessage.SendMessageAsync("Авторизация прошла успешно");
             else
+            {
                 await SenderMessage.SendErrorMessageAsync("Ошибка в авторизация");
+                skip = true;
+            }
             return api;
         }
 
