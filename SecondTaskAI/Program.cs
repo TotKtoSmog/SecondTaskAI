@@ -15,7 +15,7 @@ namespace SecondTaskAI
 {
     class Program
     {
-        private const string _path = @"C:\Users\Totkt\Desktop\data";
+        private const string _path = @"";
 
         private const bool skipEmptyFriends = true;
 
@@ -24,7 +24,6 @@ namespace SecondTaskAI
         private static List<string> friendlvlNotFound = new List<string>();
 
         static bool skip = false;
-        static List<string> paths = new List<string>();
         static List<VkApiUser> users = new List<VkApiUser>();
         static IDictionary<string, string> parameters = new Dictionary<string, string>();
         private static async Task<List<VkApiUser>> LoadUser(string PathUserFile)
@@ -70,36 +69,6 @@ namespace SecondTaskAI
                     Edges.Add($"{user.me}{delimiter}{friend.me}");
                 txtHelper.WriteFileLines(Path, Edges, true);
             }
-        }
-        private static async Task RewoveUnnecessaryEdges(string pathF, string pathFOF)
-        {
-            List<VkApiUser> friends = await LoadUser(pathF);
-            List<VkApiUser> friendsOfFriends = await LoadUser(pathFOF);
-            List<string> Edges = new List<string>();
-            foreach (VkApiUser me in friends)
-            {
-                Edges.Clear();
-                foreach(VkApiUser friend in me.friends)
-                {
-                    foreach(VkApiUser FoF in friendsOfFriends)
-                    {
-                        string[] t = FoF.friends.Select(n => n.me).ToArray();
-                        if (t.Contains(friend.me))
-                        {
-                            if (!Edges.Contains($"{friend.me},{FoF.me}") && !Edges.Contains($"{FoF.me},{friend.me}"))
-                            {
-                                Edges.Add($"{friend.me},{FoF.me}");
-                                break;
-                            }
-                        }
-                    }
-                    if(Edges.Count > 0 && ( !Edges.Contains($"{me.me},{friend.me}") && !Edges.Contains($"{friend.me},{me.me}")))
-                        Edges.Add($"{me.me},{friend.me}");
-                }
-                txtHelper.WriteFileLines(@"data\dataUser\Edges.txt", Edges, true);
-            }
-             
-            SenderMessage.SendMessage("Все!!!");
         }
         
         private static List<string> GetUSerFromCSV(string path, string columnName = "Ваш ID в VK")
@@ -182,18 +151,38 @@ namespace SecondTaskAI
                         break;
                 }  
             }
-
-            await SenderMessage.SendMessageAsync($"Начало создание ребер");
-
-            foreach(string u in friendlvlFound)
+            if (!File.Exists($@"{_path}/EdgesAll.txt"))
             {
-                if(u == "lvl0.txt") continue;
-                users = await LoadUser($@"{_path}/{u}");
-                WriteEdgesInFile(users, $@"{_path}/EdgesAll.txt");
-                await SenderMessage.SendMessageAsync($"Для {u} записаны ребра", ConsoleColor.Green);
+                await SenderMessage.SendMessageAsync($"Начало создание ребер");
+
+                foreach (string u in friendlvlFound)
+                {
+                    if (u == "lvl0.txt") continue;
+                    users = await LoadUser($@"{_path}/{u}");
+                    WriteEdgesInFile(users, $@"{_path}/EdgesAll.txt");
+                    await SenderMessage.SendMessageAsync($"Для {u} записаны ребра", ConsoleColor.Green);
+                }
             }
             await SenderMessage.SendMessageAsync($"Все ребра записаны!", ConsoleColor.Green);
+
+            await SenderMessage.SendMessageAsync($"Удаляем дубли", ConsoleColor.Green);
+            await RewoveUnnecessaryEdges($@"{_path}/EdgesAll.txt");
+            await SenderMessage.SendMessageAsync($"Все дубли удалены", ConsoleColor.Green);
             Console.ReadKey();
+        }
+        private static async Task RewoveUnnecessaryEdges(string Path)
+        {
+            List<string> edges = await txtHelper.ReadFileLinesAsync(Path);
+
+            for(int i = 0;i < edges.Count; i++)
+            {
+                if (edges[i] == "") continue;
+                string temp = edges[i].Split(CsvHelper.delimiter)[1] + $"{CsvHelper.delimiter}" + edges[i].Split(CsvHelper.delimiter)[0];
+                int index = edges.FindIndex(n => n == temp);
+                if(index == -1) continue;
+                edges[index] = "";
+            }
+            txtHelper.WriteFileLines($@"{_path}/Edges.txt", edges.Where(n => n != "").ToList());
         }
         private static void GetFriends(ref List<VkApiUser> users, VkApi api)
         {
